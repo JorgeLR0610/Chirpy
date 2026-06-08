@@ -5,22 +5,12 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
-
 	"github.com/JorgeLR0610/Chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
-type Post struct {
-	ID			uuid.UUID	`json:"id"`
-	CreatedAt	time.Time	`json:"created_at"`
-	UpdatedAt	time.Time	`json:"updated_at"`
-	Body		string		`json:"body"`
-	UserID		uuid.UUID	`json:"user_id"`
-}
 
-
-func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
 		Body string `json:"body"`
@@ -30,7 +20,7 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	if err := decoder.Decode(&params); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error decoding parameters")
+		respondWithError(w, http.StatusBadRequest, "Invalid fields")
 		return
 	}
 	
@@ -41,8 +31,8 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 
 	cleanedBody := replaceProfane(params.Body)
 
-	newPost, err := cfg.DB.CreatePost(r.Context(), 
-		database.CreatePostParams{
+	newChirp, err := cfg.DB.CreateChirp(r.Context(), 
+		database.CreateChirpParams{
 			Body: cleanedBody,
 			UserID: params.UserID,
 		})
@@ -53,12 +43,12 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post := Post {
-		ID: newPost.ID,
-		CreatedAt: newPost.CreatedAt,
-		UpdatedAt: newPost.UpdatedAt,
-		Body: newPost.Body,
-		UserID: newPost.UserID,
+	post := Chirp {
+		ID: newChirp.ID,
+		CreatedAt: newChirp.CreatedAt,
+		UpdatedAt: newChirp.UpdatedAt,
+		Body: newChirp.Body,
+		UserID: newChirp.UserID,
 	}
 
 	respondWithJSON(w, http.StatusCreated, post)

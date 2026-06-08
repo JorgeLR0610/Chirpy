@@ -4,16 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
-	"github.com/google/uuid"
 )
-
-type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-}
 
 func(cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 
@@ -24,8 +15,7 @@ func(cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	usr := userEmail{}
 	if err := decoder.Decode(&usr); err != nil {
-		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
-		log.Printf("There was an error decoding the request: %v", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid fields")
 		return
 	}
 

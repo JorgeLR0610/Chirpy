@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Post struct {
+type Chirp struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
