@@ -13,12 +13,15 @@ import (
 )
 
 type apiConfig struct {
-	fileserverHits atomic.Int32
-	DB			   *database.Queries
+	fileserverHits  atomic.Int32
+	DB			    *database.Queries
+	platform		string
 }
+
 
 func main() {
 	godotenv.Load()
+	platform := os.Getenv("PLATFORM")
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -32,16 +35,19 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		DB:				dbQueries,
+		platform: 		platform,
 	}
 
 	mux := http.NewServeMux()
 	
+	// Endpoints
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
-
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
-	mux.HandleFunc("POST /api/validate_chirp", handlerBody)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirp)
+	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+
 
 	srv := &http.Server{
 		Addr:    ":" + port,

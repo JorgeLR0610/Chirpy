@@ -4,3 +4,6 @@ VALUES (
     now(), now(), $1
 )
 RETURNING *;
+
+-- name: DeleteUsers :exec
+TRUNCATE TABLE users;
