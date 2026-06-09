@@ -19,3 +19,8 @@ type Chirp struct {
 	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
 }
+
+type UserCredentials struct {
+		Password string `json:"password"`
+		Email string `json:"email"`
+	}
