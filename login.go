@@ -21,12 +21,13 @@ func(cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	u, err := cfg.DB.GetUser(r.Context(), usr.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			auth.SimulatePasswordCheck(usr.Password)
 			respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
 			return
 		}
 
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password")
-		log.Printf("There was an error logging the user: %v", err)
+		log.Printf("There was an error finding the user email: %v", err)
 		return
 	}
 
