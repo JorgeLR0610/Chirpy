@@ -11,7 +11,7 @@ import (
 
 func(cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	usr := UserCredentials{}
+	usr := UserRegisterParams{}
 	if err := decoder.Decode(&usr); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid fields")
 		return

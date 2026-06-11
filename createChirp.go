@@ -5,36 +5,48 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/JorgeLR0610/Chirpy/internal/auth"
 	"github.com/JorgeLR0610/Chirpy/internal/database"
-	"github.com/google/uuid"
 )
 
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 
-	type parameters struct {
-		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+	type chirpParameters struct {
+		Body string `json:"body"`	
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	if err := decoder.Decode(&params); err != nil {
+	chirpParams := chirpParameters{}
+	if err := decoder.Decode(&chirpParams); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid fields")
 		return
 	}
+
+	userToken, err := auth.GetBearerToken(r.Header) 
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	userUUID, err := auth.ValidateJWT(userToken, cfg.Secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
 	
-	if len(params.Body) > 140 {
+	if len(chirpParams.Body) > 140 {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
 
-	cleanedBody := replaceProfane(params.Body)
+	cleanedBody := replaceProfane(chirpParams.Body)
 
 	newChirp, err := cfg.DB.CreateChirp(r.Context(), 
 		database.CreateChirpParams{
 			Body: cleanedBody,
-			UserID: params.UserID,
+			UserID: userUUID,
 		})
 	
 	if err != nil {

@@ -10,6 +10,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token	  string	`json:"token"`
 }
 
 type Chirp struct {
@@ -20,7 +21,13 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-type UserCredentials struct {
+type UserRegisterParams struct {
 		Password string `json:"password"`
 		Email string `json:"email"`
+	}
+
+type UserLoginParams struct {
+		Password string `json:"password"`
+		Email string `json:"email"`
+		ExpiresInSeconds int `json:"expires_in_seconds"`
 	}
