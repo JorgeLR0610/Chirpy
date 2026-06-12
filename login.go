@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/JorgeLR0610/Chirpy/internal/auth"
+	"github.com/JorgeLR0610/Chirpy/internal/database"
 )
 
 func(cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -17,10 +18,6 @@ func(cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	if err := decoder.Decode(&usr); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid fields")
 		return
-	}
-
-	if usr.ExpiresInSeconds <= 0 || usr.ExpiresInSeconds > 3600 {
-		usr.ExpiresInSeconds = 3600
 	}
 
 	u, err := cfg.DB.GetUser(r.Context(), usr.Email)
@@ -49,7 +46,15 @@ func(cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userToken, err := auth.MakeJWT(u.ID, cfg.Secret, time.Duration(usr.ExpiresInSeconds))
+	// Create access token (1 hour) and refresh token
+	userToken, err := auth.MakeJWT(u.ID, cfg.Secret)
+	userRefreshToken := auth.MakeRefreshToken()
+
+	// Create refresh token in DB, expiring on 60 days
+	_, err = cfg.DB.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		UserID: u.ID,
+		ExpiresAt: time.Now().UTC().Add(time.Hour * 24 * 60),
+	})
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "There was an error on our side")
@@ -63,6 +68,7 @@ func(cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: u.UpdatedAt,
 		Email: u.Email,
 		Token: userToken,
+		RefreshToken: userRefreshToken,
 	}
 
 	respondWithJSON(w, http.StatusOK, user)

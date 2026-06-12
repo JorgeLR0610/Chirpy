@@ -11,6 +11,7 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
 	Token	  string	`json:"token"`
+	RefreshToken string	`json:"refresh_token"`
 }
 
 type Chirp struct {
@@ -29,5 +30,4 @@ type UserRegisterParams struct {
 type UserLoginParams struct {
 		Password string `json:"password"`
 		Email string `json:"email"`
-		ExpiresInSeconds int `json:"expires_in_seconds"`
 	}
