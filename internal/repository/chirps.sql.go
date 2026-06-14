@@ -3,7 +3,7 @@
 //   sqlc v1.31.1
 // source: chirps.sql
 
-package database
+package repository
 
 import (
 	"context"

@@ -24,7 +24,7 @@ func MakeJWT(userID uuid.UUID, tokenSecret string) (string, error) {
 
 	tokenString, err := token.SignedString([]byte(tokenSecret))
 	if err !=  nil {
-		return "", fmt.Errorf("There was an error signing the access token: %w", err)
+		return "", err
 	}
 
 	return tokenString, nil

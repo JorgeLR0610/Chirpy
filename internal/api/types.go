@@ -1,11 +1,11 @@
-package main
+package api
 
 import (
 	"time"
 	"github.com/google/uuid"
 )
 
-type User struct {
+type UserLoginResponse struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -13,6 +13,14 @@ type User struct {
 	Token	  string	`json:"token"`
 	RefreshToken string	`json:"refresh_token"`
 }
+
+type UserCreationResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
+
 
 type Chirp struct {
 	ID        uuid.UUID `json:"id"`

@@ -6,7 +6,7 @@ VALUES (
 RETURNING id, created_at, updated_at, email;
 
 -- name: DeleteUsers :exec
-TRUNCATE TABLE users;
+TRUNCATE TABLE users CASCADE;
 
 -- name: GetUser :one
 SELECT * FROM users WHERE email = $1;
