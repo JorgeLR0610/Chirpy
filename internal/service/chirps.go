@@ -3,13 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/JorgeLR0610/Chirpy/internal/repository"
 	"github.com/google/uuid"
 )
 
-var ErrChirpTooLong = errors.New("Chirp is too long")
+var ErrChirpTooLong = errors.New("chirp is too long")
+var ErrNoRows = errors.New("resource not found")
 
 type ChirpService struct {
 	repo	*repository.Queries
@@ -56,4 +58,20 @@ func replaceProfane(body string) string {
 	}
 
 	return strings.Join(words, " ")
+}
+
+func (s *ChirpService) DeleteChirp(ctx context.Context, chirpID uuid.UUID) (error) {
+	rows, err := s.repo.DeleteChirp(ctx, chirpID) 
+
+	if err != nil {
+		log.Printf("Could not delete a row in table chirps: %v", err)
+		return err
+	}
+
+	if rows == 0 {
+		return ErrNoRows
+	}
+
+	return nil
+
 }

@@ -22,17 +22,17 @@ func NewTokenService(repo *repository.Queries) *TokenService {
 }
 
 func (s *TokenService) RefreshAccessToken(ctx context.Context, refreshToken, secret string) (string, error) {
-	storedToken, err := s.repo.GetUserFromRefreshToken(ctx, refreshToken)
+	storedRefreshToken, err := s.repo.GetUserFromRefreshToken(ctx, refreshToken)
 	if err != nil {
 		log.Printf("There was an error retrieving a refresh token: %v", err)
 		return "", err
 	}
 
-	if storedToken.ExpiresAt.Before(time.Now().UTC()) || storedToken.RevokedAt.Valid {
+	if storedRefreshToken.ExpiresAt.Before(time.Now().UTC()) || storedRefreshToken.RevokedAt.Valid {
 		return "", ErrTokenExpOrRev
 	}
 
-	newAccesToken, err := auth.MakeJWT(storedToken.UserID, secret)
+	newAccesToken, err := auth.MakeJWT(storedRefreshToken.UserID, secret)
 	if err != nil {
 		log.Printf("There was an error refreshing a token access: %v", err)
 		return "", err

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -13,8 +12,8 @@ import (
 )
 
 type ChirpHandler struct {
-	service	*service.ChirpService
-	secret	string
+	service *service.ChirpService
+	secret  string
 }
 
 func NewChirpHandler(svc *service.ChirpService, secret string) *ChirpHandler {
@@ -24,7 +23,7 @@ func NewChirpHandler(svc *service.ChirpService, secret string) *ChirpHandler {
 func (h *ChirpHandler) HandlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	type chirpParameters struct {
-		Body string `json:"body"`	
+		Body string `json:"body"`
 	}
 
 	var chirpParams chirpParameters
@@ -33,7 +32,7 @@ func (h *ChirpHandler) HandlerCreateChirp(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	requestToken, err := auth.GetBearerToken(r.Header) 
+	requestToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
@@ -45,24 +44,24 @@ func (h *ChirpHandler) HandlerCreateChirp(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chirp, err := h.service.CreateChirp(r.Context(), chirpParams.Body, userID)
-		if err != nil {
-			if errors.Is(err, service.ErrChirpTooLong) {
-				respondWithError(w, http.StatusBadRequest, "Chirp is too long")
-				return
-			}
-
-			respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
+	newChirp, err := h.service.CreateChirp(r.Context(), chirpParams.Body, userID)
+	if err != nil {
+		if errors.Is(err, service.ErrChirpTooLong) {
+			respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 			return
 		}
 
-		respondWithJSON(w, http.StatusCreated, Chirp{
-			ID: chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body: chirp.Body,
-			UserID: chirp.UserID,
-		})
+		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, chirp{
+		ID:        newChirp.ID,
+		CreatedAt: newChirp.CreatedAt,
+		UpdatedAt: newChirp.UpdatedAt,
+		Body:      newChirp.Body,
+		UserID:    newChirp.UserID,
+	})
 }
 
 func (h *ChirpHandler) HandlerGetChirp(w http.ResponseWriter, r *http.Request) {
@@ -72,10 +71,10 @@ func (h *ChirpHandler) HandlerGetChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chirp, err := h.service.GetChirp(r.Context(), chirpUUID)
-	
+	requestedChirp, err := h.service.GetChirp(r.Context(), chirpUUID)
+
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, service.ErrNoRows) {
 			respondWithError(w, http.StatusNotFound, "Chirp not found")
 			return
 		}
@@ -84,14 +83,13 @@ func (h *ChirpHandler) HandlerGetChirp(w http.ResponseWriter, r *http.Request) {
 		log.Printf("There was an error retrieving the chirps: %v", err)
 		return
 	}
-	
 
-	respondWithJSON(w, http.StatusOK, Chirp{
-		ID: chirp.ID,
-		CreatedAt: chirp.CreatedAt,
-		UpdatedAt: chirp.UpdatedAt,
-		Body: chirp.Body,
-		UserID: chirp.UserID,
+	respondWithJSON(w, http.StatusOK, chirp{
+		ID:        requestedChirp.ID,
+		CreatedAt: requestedChirp.CreatedAt,
+		UpdatedAt: requestedChirp.UpdatedAt,
+		Body:      requestedChirp.Body,
+		UserID:    requestedChirp.UserID,
 	})
 }
 
@@ -103,19 +101,66 @@ func (h *ChirpHandler) HandlerGetChirps(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	resp := make([]Chirp, 0, len(chirps))
+	resp := make([]chirp, 0, len(chirps))
 
 	for _, c := range chirps {
-		resp = append(resp, Chirp{
-			ID: c.ID,
+		resp = append(resp, chirp{
+			ID:        c.ID,
 			CreatedAt: c.CreatedAt,
 			UpdatedAt: c.UpdatedAt,
-			Body: c.Body,
-			UserID: c.UserID,
+			Body:      c.Body,
+			UserID:    c.UserID,
 		})
 	}
 
 	respondWithJSON(w, http.StatusOK, resp)
 }
 
+func (h *ChirpHandler) HandlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
 
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	requestUserID, err := auth.ValidateJWT(accessToken, h.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	chirpUUID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID")
+		return
+	}	
+
+	chirpToDelete, err := h.service.GetChirp(r.Context(), chirpUUID)
+	if err != nil {
+		if errors.Is(err, service.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "Chirp not found")
+			return
+		}
+
+		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
+		return
+	}
+
+	if chirpToDelete.UserID != requestUserID {
+		respondWithError(w, http.StatusForbidden, "Forbidden")
+		return
+	}
+
+	if err := h.service.DeleteChirp(r.Context(), chirpToDelete.ID); err != nil {
+		if errors.Is(err, service.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "Not found")
+			return
+		}
+
+		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
+		return 
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

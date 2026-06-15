@@ -9,7 +9,10 @@ import (
 
 	"github.com/JorgeLR0610/Chirpy/internal/auth"
 	"github.com/JorgeLR0610/Chirpy/internal/repository"
+	"github.com/google/uuid"
 )
+
+var ErrInvalidPassword = errors.New("incorrect email or password")
 
 type LoginResult struct {
 	User         repository.User
@@ -49,9 +52,9 @@ func(s *UserService) LoginUser(ctx context.Context, email, password, secret stri
 
 user, err := s.repo.GetUser(ctx, email)
 if err != nil {
-	if errors.Is(err, sql.ErrNoRows){
+	if errors.Is(err, sql.ErrNoRows) {
 		auth.SimulatePasswordCheck(password)
-		return LoginResult{}, err
+		return LoginResult{}, ErrInvalidPassword
 	}
 
 	log.Printf("There was an error finding the user email")
@@ -88,5 +91,26 @@ if err != nil {
 		RefreshToken: RefreshToken,
 	}, nil
 
+}
+
+func(s *UserService) UpdateCredentials(ctx context.Context, email, newPassword string, userID uuid.UUID) (repository.UpdateEmailAndPasswordRow, error) {
+	hashedPassword, err := auth.HashPassword(newPassword)
+	if err != nil {
+		log.Printf("Hashing failed: %v", err)
+		return repository.UpdateEmailAndPasswordRow{}, err
+	}
+
+	newUser, err := s.repo.UpdateEmailAndPassword(ctx, repository.UpdateEmailAndPasswordParams{
+		Email: email,
+		HashedPassword: hashedPassword,
+		UpdatedAt: time.Now().UTC(),
+		ID: userID,
+	})
+	if err != nil {
+		log.Printf("There was an error updating a user credentials: %v", err)
+		return repository.UpdateEmailAndPasswordRow{}, err
+	}
+
+	return newUser, nil
 }
 

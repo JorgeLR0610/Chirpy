@@ -62,6 +62,8 @@ func main() {
 	// Users
 	mux.HandleFunc("POST /api/users", userHandler.HandlerCreateUser)
 	mux.HandleFunc("POST /api/login", userHandler.HandlerLoginUser)
+	mux.HandleFunc("PUT /api/users", userHandler.HandlerUpdateCredentials)
+
 
 	// Tokens
 	mux.HandleFunc("POST /api/refresh", tokensHandler.HandlerRefreshAccessToken)
@@ -71,6 +73,7 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", chirpHandler.HandlerCreateChirp)
 	mux.HandleFunc("GET /api/chirps", chirpHandler.HandlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", chirpHandler.HandlerGetChirp)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", chirpHandler.HandlerDeleteChirp)
 
 
 	srv := &http.Server{

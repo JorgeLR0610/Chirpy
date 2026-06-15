@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 
@@ -54,7 +53,7 @@ func (h *TokensHandler) HandlerRevokeRefreshToken(w http.ResponseWriter, r *http
 
 	err = h.service.RevokeRefreshToken(r.Context(), refreshToken)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, service.ErrNoRows) {
 			respondWithError(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
