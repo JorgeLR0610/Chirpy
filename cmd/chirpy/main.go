@@ -19,6 +19,7 @@ func main() {
 	platform := os.Getenv("PLATFORM")
 	dbURL := os.Getenv("DB_URL")
 	secret := os.Getenv("JWT_SECRET")
+	apiKey := os.Getenv("POLKA_KEY")
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -41,7 +42,7 @@ func main() {
 	hitsCounter := &atomic.Int32{}
 
 	adminHandler := api.NewAdminHandler(adminSvc, platform, hitsCounter)
-	userHandler := api.NewUserHandler(userSvc, secret)
+	userHandler := api.NewUserHandler(userSvc, secret, apiKey)
 	chirpHandler := api.NewChirpHandler(chirpSvc, secret)
 	tokensHandler := api.NewRefreshAccessTokenHandler(tokenSvc, secret)	
 
@@ -63,7 +64,7 @@ func main() {
 	mux.HandleFunc("POST /api/users", userHandler.HandlerCreateUser)
 	mux.HandleFunc("POST /api/login", userHandler.HandlerLoginUser)
 	mux.HandleFunc("PUT /api/users", userHandler.HandlerUpdateCredentials)
-
+	mux.HandleFunc("POST /api/polka/webhooks", userHandler.HandlerUpgradeUserToChirpyRed)
 
 	// Tokens
 	mux.HandleFunc("POST /api/refresh", tokensHandler.HandlerRefreshAccessToken)

@@ -2,30 +2,47 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/JorgeLR0610/Chirpy/internal/auth"
 	"github.com/JorgeLR0610/Chirpy/internal/service"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
 	service *service.UserService
 	secret  string
+	apiKey	string
 }
 
-func NewUserHandler(svc *service.UserService, secret string) *UserHandler {
-	return &UserHandler{service: svc, secret: secret}
+func NewUserHandler(svc *service.UserService, secret string, apiKey string) *UserHandler {
+	return &UserHandler{service: svc, secret: secret, apiKey:apiKey}
 }
 
 func (h *UserHandler) HandlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	var user userRegisterParams
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid fields")
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields() 
+
+	if err := decoder.Decode(&user); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+
+	if user.Email == "" || user.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "Email and password are required")
 		return
 	}
 
 	newUser, err := h.service.CreateUser(r.Context(), user.Email, user.Password)
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidEmail) || errors.Is(err, service.ErrPasswdLenght) {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}	
+
 		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
 		return
 	}
@@ -35,6 +52,7 @@ func (h *UserHandler) HandlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		CreatedAt: newUser.CreatedAt,
 		UpdatedAt: newUser.UpdatedAt,
 		Email:     newUser.Email,
+		IsChirpyRed: newUser.IsChirpyRed,
 	})
 }
 
@@ -93,4 +111,50 @@ func (h *UserHandler) HandlerUpdateCredentials(w http.ResponseWriter, r *http.Re
 		Email:     updatedUser.Email,
 	})
 
+}
+
+func (h *UserHandler) HandlerUpgradeUserToChirpyRed(w http.ResponseWriter, r *http.Request) {
+
+	requestApiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	if requestApiKey != h.apiKey {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	var upgrade userSubscriptionUpgrade
+	
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&upgrade); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+
+	if upgrade.Event != "user.upgraded" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	userID, err := uuid.Parse(upgrade.Data.UserID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	err = h.service.UpgradeUserToChirpyRed(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, service.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "User not found")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

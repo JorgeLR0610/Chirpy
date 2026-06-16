@@ -10,6 +10,7 @@ type userLoginResponse struct {
 	ID           uuid.UUID `json:"id"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	IsChirpyRed	 bool		`json:"is_chirpy_red"`
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
@@ -20,6 +21,7 @@ type userCreationResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	IsChirpyRed	 bool		`json:"is_chirpy_red"`
 }
 
 type chirp struct {
@@ -50,4 +52,14 @@ type userCredentialsUpdateResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	IsChirpyRed	 bool	`json:"is_chirpy_red"`
+}
+
+type userSubscriptionUpgrade struct {
+	Event	string	 `json:"event"`
+	Data	UserUpgradeData `json:"data"`
+}
+
+type UserUpgradeData struct {
+	UserID	string	`json:"user_id"`
 }

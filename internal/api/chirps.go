@@ -5,8 +5,10 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"slices"
 
 	"github.com/JorgeLR0610/Chirpy/internal/auth"
+	"github.com/JorgeLR0610/Chirpy/internal/repository"
 	"github.com/JorgeLR0610/Chirpy/internal/service"
 	"github.com/google/uuid"
 )
@@ -27,8 +29,11 @@ func (h *ChirpHandler) HandlerCreateChirp(w http.ResponseWriter, r *http.Request
 	}
 
 	var chirpParams chirpParameters
-	if err := json.NewDecoder(r.Body).Decode(&chirpParams); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid fields")
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&chirpParams); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
 	}
 
@@ -46,8 +51,8 @@ func (h *ChirpHandler) HandlerCreateChirp(w http.ResponseWriter, r *http.Request
 
 	newChirp, err := h.service.CreateChirp(r.Context(), chirpParams.Body, userID)
 	if err != nil {
-		if errors.Is(err, service.ErrChirpTooLong) {
-			respondWithError(w, http.StatusBadRequest, "Chirp is too long")
+		if errors.Is(err, service.ErrChirpTooLong) || errors.Is(err, service.ErrChirpTooShort) {
+			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -94,10 +99,30 @@ func (h *ChirpHandler) HandlerGetChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ChirpHandler) HandlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := h.service.GetChirps(r.Context())
+
+	sorting := r.URL.Query().Get("sort")
+
+	var chirps []repository.Chirp
+	var err error
+
+	if authorIDStr := r.URL.Query().Get("author_id"); authorIDStr != "" {
+		authorUUID, parseErr := uuid.Parse(authorIDStr)
+		if parseErr != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid author ID")
+			return
+		}
+		chirps, err = h.service.GetChirpsFromAuthor(r.Context(), authorUUID)
+	} else {
+		chirps, err = h.service.GetChirps(r.Context())
+	}
+	
 	if err != nil {
+		if errors.Is(err, service.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "Author not found")
+			return
+		}
+		
 		respondWithError(w, http.StatusInternalServerError, "There was an error on our end")
-		log.Printf("There was an error retrieving the chirps: %v", err)
 		return
 	}
 
@@ -113,6 +138,11 @@ func (h *ChirpHandler) HandlerGetChirps(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 
+	if sorting == "desc" {
+		slices.SortFunc(resp, func(a, b chirp) int {
+			return b.CreatedAt.Compare(a.CreatedAt)
+	})
+}
 	respondWithJSON(w, http.StatusOK, resp)
 }
 

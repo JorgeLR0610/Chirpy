@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/JorgeLR0610/Chirpy/internal/auth"
@@ -13,6 +14,8 @@ import (
 )
 
 var ErrInvalidPassword = errors.New("incorrect email or password")
+var ErrPasswdLenght = errors.New("password must be at least 8 characters long")
+var ErrInvalidEmail = errors.New("invalid email format")
 
 type LoginResult struct {
 	User         repository.User
@@ -29,6 +32,14 @@ func NewUserService(repo *repository.Queries) *UserService {
 }
 
 func(s *UserService) CreateUser(ctx context.Context, email, password string) (repository.CreateUserRow, error) {
+
+	if len(password) < 8 {
+		return repository.CreateUserRow{}, ErrPasswdLenght
+	}
+
+	if !strings.Contains(email, "@") || !strings.Contains(email, ".") {
+		return repository.CreateUserRow{}, ErrInvalidEmail
+	}
 
 	hashedPassword, err := auth.HashPassword(password)
 	if err != nil {
@@ -112,5 +123,23 @@ func(s *UserService) UpdateCredentials(ctx context.Context, email, newPassword s
 	}
 
 	return newUser, nil
+}
+
+func(s *UserService) UpgradeUserToChirpyRed(ctx context.Context, userID uuid.UUID) (error) {
+	rows, err := s.repo.UpgradeUserToChirpyRed(ctx, repository.UpgradeUserToChirpyRedParams{
+		UpdatedAt: time.Now().UTC(),
+		ID: userID,
+	})
+
+	if err != nil {
+		log.Printf("Could not update the subscription status of a user: %v", err)
+		return err
+	}
+
+	if rows == 0 {
+		return ErrNoRows
+	}
+
+	return nil
 }
 

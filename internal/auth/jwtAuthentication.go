@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -65,7 +64,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 
 	// Check if header exists and starts with "Bearer "
 	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return "", fmt.Errorf("Unauthorized")
+		return "", errors.New("Unauthorized")
 	}
 
 	return strings.TrimPrefix(authHeader, "Bearer "), nil

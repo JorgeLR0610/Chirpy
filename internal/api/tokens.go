@@ -20,7 +20,7 @@ func NewRefreshAccessTokenHandler(tokenSvc *service.TokenService, secret string)
 func (h *TokensHandler) HandlerRefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Unathorized")
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
