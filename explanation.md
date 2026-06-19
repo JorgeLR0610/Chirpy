@@ -1,3 +1,5 @@
+## Explicación del proceso de conexión a la base de datos
+
 Es fundamental separar las responsabilidades de las tres herramientas principales configuradas: Goose, SQLC y el paquete estándar de bases de datos de Go.
 
 ### 1. Goose (El Esquema Físico)
